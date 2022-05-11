@@ -5,21 +5,36 @@ import * as AWS from  "aws-sdk"
 import * as fs from 'fs';
 // @ts-ignore
 import * as Mustache from "mustache";
-const fileUrlTemplate = "https://{{bucket}}.s3.{{region}}.amazonaws.com/{{{path}}}"
+const amazonS3FileTemplate = "https://{{bucket}}.s3.amazonaws.com/{{{path}}}"
+
+
+interface credentials {
+    accessKeyId: string,
+    secretAccessKey: string,
+    bucket: string
+}
 
 export default class S3CloudStorageManager extends CloudStorageManager{
 
     s3:any;
+    credentials: credentials
+    fileUrlTemplate: string
     constructor(props: any) {
         super(props);
-        this.s3 = new AWS.S3({...this.props?.credentials,signatureVersion: 'v4'})
+        this.credentials = {
+            accessKeyId: this.props?.credentials?.accessKeyId || this.props?.accessKeyId,
+            secretAccessKey: this.props?.credentials?.secretAccessKey || this.props?.secretAccessKey,
+            bucket: this.props?.credentials?.bucket || this.props?.bucket
+        }
+        this.fileUrlTemplate = this.props.fileUrlTemplate || amazonS3FileTemplate;
+        this.s3 = new AWS.S3({...this.credentials,signatureVersion: 'v4'})
     }
     static type = "s3";
 
 
     deleteFile(path: string) {
         const objectParams = {
-            Bucket: this.props.credentials.bucket,
+            Bucket: this.credentials.bucket,
             Key: path
         }
 
@@ -35,16 +50,15 @@ export default class S3CloudStorageManager extends CloudStorageManager{
 
     getFile(path: string) {
         const objectParams = {
-            Bucket: this.props.credentials.bucket,
+            Bucket: this.credentials.bucket,
             Key: path
         }
         return this.s3.getObject(objectParams).promise()
     }
 
     getFileURL(path: string): string {
-        return Mustache.render(fileUrlTemplate,{
-            bucket: this.props.credentials.bucket,
-            region: this.props.credentials.region,
+        return Mustache.render(this.fileUrlTemplate,{
+            bucket: this.credentials.bucket,
             path: path.replace(/^\/|\/$/g, '')
         })
     }
@@ -59,21 +73,23 @@ export default class S3CloudStorageManager extends CloudStorageManager{
     }
 
     uploadFile(origin:string, destination:string, conf:any) {
-        const contentType = mime.lookup(origin)
         const readStream = fs.createReadStream(origin);
+        return this.uploadFileBody(readStream, destination, conf)
+    }
 
-
-        var objectParams = {
+    uploadFileBody(body: any, destination: string, conf: any) {
+        const contentType = mime.lookup(destination)
+        const objectParams = {
             ContentMD5: conf?.ContentMD5,
             ACL:conf?.publicRead?'public-read':undefined,
             ...conf?.headers,
-            Bucket: this.props.credentials.bucket,
+            Bucket: this.credentials.bucket,
             Key: destination,
-            Body: readStream,
+            Body: body,
             ContentType: contentType
         };
-
         return this.s3.putObject(objectParams).promise();
     }
+
 
 }

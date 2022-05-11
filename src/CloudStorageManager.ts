@@ -1,7 +1,7 @@
 export default abstract class CloudStorageManager {
     props: any;
 
-    static  type: string;
+    static type: string;
 
     constructor(props: any) {
 
@@ -9,6 +9,7 @@ export default abstract class CloudStorageManager {
     }
 
     abstract uploadFile(origin: string, destination: string, conf:any):any;
+    abstract uploadFileBody(body: any, destination: string, conf: any):any;
     abstract getFile(path: string):any;
     abstract deleteFile(path: string):any;
     abstract deleteFolder(path: string):any;
