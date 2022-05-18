@@ -21,13 +21,14 @@ export default class S3CloudStorageManager extends CloudStorageManager{
     fileUrlTemplate: string
     constructor(props: any) {
         super(props);
+        const {credentials, accessKeyId, secretAccessKey,bucket, ...otherProps} = this.props
         this.credentials = {
-            accessKeyId: this.props?.credentials?.accessKeyId || this.props?.accessKeyId,
-            secretAccessKey: this.props?.credentials?.secretAccessKey || this.props?.secretAccessKey,
-            bucket: this.props?.credentials?.bucket || this.props?.bucket
+            accessKeyId: credentials?.accessKeyId || accessKeyId,
+            secretAccessKey: credentials?.secretAccessKey || secretAccessKey,
+            bucket: credentials?.bucket || bucket
         }
         this.fileUrlTemplate = this.props.fileUrlTemplate || amazonS3FileTemplate;
-        this.s3 = new AWS.S3({...this.credentials,signatureVersion: 'v4'})
+        this.s3 = new AWS.S3({signatureVersion: 'v4',...otherProps, ...this.credentials})
     }
     static type = "s3";
 
